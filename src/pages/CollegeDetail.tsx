@@ -13,7 +13,11 @@ import {
   Building,
   Users,
   GraduationCap,
-  BookOpen
+  BookOpen,
+  Award,
+  Heart,
+  BriefcaseBusiness,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +33,7 @@ import { Progress } from '@/components/ui/progress';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { colleges } from '@/lib/data';
+import { useAuth } from '@/context/AuthContext';
 import type { College } from '@/lib/data';
 
 const CollegeDetail = () => {
@@ -37,6 +42,7 @@ const CollegeDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [scrolled, setScrolled] = useState(false);
+  const { isInWishlist, addToWishlist, removeFromWishlist, user } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -57,6 +63,16 @@ const CollegeDetail = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [id]);
+
+  const handleWishlistToggle = () => {
+    if (!college) return;
+    
+    if (isInWishlist(college.id)) {
+      removeFromWishlist(college.id);
+    } else {
+      addToWishlist(college.id);
+    }
+  };
 
   if (loading) {
     return (
@@ -95,6 +111,8 @@ const CollegeDetail = () => {
     return `₹${amount.toLocaleString()}`;
   };
 
+  const isWishlisted = user ? isInWishlist(college.id) : false;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -121,10 +139,25 @@ const CollegeDetail = () => {
                   <span className="font-medium">{college.rating}/5</span>
                   <span className="text-muted-foreground ml-1">({college.reviews} reviews)</span>
                 </div>
+                {college.naac && (
+                  <>
+                    <div className="mx-2 h-1 w-1 rounded-full bg-muted-foreground"></div>
+                    <Badge variant="outline">NAAC {college.naac}</Badge>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline">Save</Button>
+              {user && (
+                <Button 
+                  variant={isWishlisted ? "default" : "outline"} 
+                  className={isWishlisted ? "bg-red-500 hover:bg-red-600" : ""}
+                  onClick={handleWishlistToggle}
+                >
+                  <Heart className={`mr-2 h-4 w-4 ${isWishlisted ? "fill-white" : ""}`} />
+                  {isWishlisted ? "Wishlisted" : "Add to Wishlist"}
+                </Button>
+              )}
               <Button>Apply Now</Button>
             </div>
           </div>
@@ -137,7 +170,20 @@ const CollegeDetail = () => {
         <div className="container px-4 md:px-6">
           <div className="flex items-center justify-between py-2">
             <h2 className="font-medium truncate">{college.name}</h2>
-            <Button size="sm">Apply Now</Button>
+            <div className="flex items-center gap-2">
+              {user && (
+                <Button 
+                  size="sm" 
+                  variant={isWishlisted ? "default" : "outline"}
+                  className={isWishlisted ? "bg-red-500 hover:bg-red-600" : ""}
+                  onClick={handleWishlistToggle}
+                >
+                  <Heart className={`mr-2 h-3 w-3 ${isWishlisted ? "fill-white" : ""}`} />
+                  {isWishlisted ? "Wishlisted" : "Wishlist"}
+                </Button>
+              )}
+              <Button size="sm">Apply Now</Button>
+            </div>
           </div>
         </div>
       </div>
@@ -156,13 +202,19 @@ const CollegeDetail = () => {
                   <Badge className="absolute top-4 left-4 bg-primary text-white border-0">
                     RANK #{college.ranking}
                   </Badge>
+                  {college.nirf && (
+                    <Badge className="absolute top-4 right-4 bg-amber-500 text-white border-0">
+                      NIRF RANK #{college.nirf}
+                    </Badge>
+                  )}
                 </div>
 
                 <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="p-1">
-                  <TabsList className="w-full grid grid-cols-4 bg-gray-50">
+                  <TabsList className="w-full grid grid-cols-5 bg-gray-50">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="courses">Courses</TabsTrigger>
                     <TabsTrigger value="facilities">Facilities</TabsTrigger>
+                    <TabsTrigger value="placements">Placements</TabsTrigger>
                     <TabsTrigger value="reviews">Reviews</TabsTrigger>
                   </TabsList>
                   
@@ -229,6 +281,33 @@ const CollegeDetail = () => {
                           </CardContent>
                         </Card>
                       </div>
+
+                      {college.awards && college.awards.length > 0 && (
+                        <div>
+                          <h3 className="text-xl font-semibold mb-4">Awards & Recognition</h3>
+                          <div className="grid grid-cols-1 gap-3">
+                            {college.awards.map((award, index) => (
+                              <div key={index} className="flex items-center p-3 bg-yellow-50 rounded-lg">
+                                <Award className="h-6 w-6 text-yellow-600 mr-3" />
+                                <span>{award}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {college.accreditation && college.accreditation.length > 0 && (
+                        <div>
+                          <h3 className="text-xl font-semibold mb-4">Accreditation</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {college.accreditation.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="text-sm">
+                                {item}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
                     
                     <TabsContent value="courses" className="mt-0 space-y-6">
@@ -244,7 +323,7 @@ const CollegeDetail = () => {
                                   <CardTitle className="text-lg">{course}</CardTitle>
                                 </div>
                                 <Badge variant="outline">
-                                  {Math.floor(Math.random() * 4) + 2} Years
+                                  {["2 Years", "3 Years", "4 Years", "5 Years"][Math.floor(Math.random() * 4)]}
                                 </Badge>
                               </div>
                               <CardDescription>
@@ -254,9 +333,9 @@ const CollegeDetail = () => {
                             <CardContent>
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <div className="text-sm text-muted-foreground">Course Fee</div>
+                                  <div className="text-sm text-muted-foreground">Per Semester Fee</div>
                                   <div className="text-lg font-medium">
-                                    {formatAmount(college.fees.min + Math.floor(Math.random() * (college.fees.max - college.fees.min)))}
+                                    {formatAmount(college.fees.perSemester || college.fees.min / 2)}
                                   </div>
                                 </div>
                                 <Button size="sm">Course Details</Button>
@@ -282,6 +361,76 @@ const CollegeDetail = () => {
                           </Card>
                         ))}
                       </div>
+                    </TabsContent>
+
+                    <TabsContent value="placements" className="mt-0 space-y-6">
+                      <h3 className="text-xl font-semibold mb-4">Placement Information</h3>
+                      
+                      {college.placements ? (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center">
+                                  <DollarSign className="h-5 w-5 mr-2 text-green-600" />
+                                  <CardTitle className="text-base">Average Package</CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-xl font-bold text-green-600">
+                                  {formatAmount(college.placements.averagePackage || 0)}/year
+                                </p>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center">
+                                  <DollarSign className="h-5 w-5 mr-2 text-green-600" />
+                                  <CardTitle className="text-base">Highest Package</CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-xl font-bold text-green-600">
+                                  {formatAmount(college.placements.highestPackage || 0)}/year
+                                </p>
+                              </CardContent>
+                            </Card>
+                            
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center">
+                                  <Users className="h-5 w-5 mr-2 text-green-600" />
+                                  <CardTitle className="text-base">Placement Rate</CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-xl font-bold text-green-600">
+                                  {college.placements.placementPercentage || 0}%
+                                </p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                          
+                          {college.placements.topRecruiters && (
+                            <div>
+                              <h4 className="text-lg font-semibold mb-3">Top Recruiters</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {college.placements.topRecruiters.map((company, index) => (
+                                  <Badge key={index} variant="outline" className="bg-gray-50">
+                                    <BriefcaseBusiness className="h-3 w-3 mr-1" />
+                                    {company}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="bg-muted p-6 rounded-lg text-center">
+                          <p className="text-muted-foreground">Placement information not available for this college.</p>
+                        </div>
+                      )}
                     </TabsContent>
                     
                     <TabsContent value="reviews" className="mt-0 space-y-6">
@@ -410,8 +559,12 @@ const CollegeDetail = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Tuition Fee</span>
+                    <span className="text-muted-foreground">Tuition Fee (per year)</span>
                     <span className="font-medium">{formatAmount(college.fees.min)} - {formatAmount(college.fees.max)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Per Semester</span>
+                    <span className="font-medium">{formatAmount(college.fees.perSemester || college.fees.min/2)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Hostel Fee</span>

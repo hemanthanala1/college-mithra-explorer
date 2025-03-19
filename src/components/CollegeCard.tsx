@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Check, ChevronRight } from 'lucide-react';
+import { Star, MapPin, Check, ChevronRight, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -12,6 +12,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
+import { useAuth } from '@/context/AuthContext';
 import type { College } from '@/lib/data';
 
 interface CollegeCardProps {
@@ -21,12 +22,26 @@ interface CollegeCardProps {
 
 const CollegeCard = ({ college, featured = false }: CollegeCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { isInWishlist, addToWishlist, removeFromWishlist, user } = useAuth();
+  
+  const isWishlisted = isInWishlist(college.id);
 
   const formatAmount = (amount: number) => {
     if (amount >= 100000) {
       return `₹${(amount / 100000).toFixed(1)} Lakhs`;
     }
     return `₹${amount.toLocaleString()}`;
+  };
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isWishlisted) {
+      removeFromWishlist(college.id);
+    } else {
+      addToWishlist(college.id);
+    }
   };
 
   return (
@@ -51,12 +66,24 @@ const CollegeCard = ({ college, featured = false }: CollegeCardProps) => {
           }`}
           onLoad={() => setImageLoaded(true)}
         />
+        {user && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`absolute top-3 right-3 h-8 w-8 rounded-full bg-white/90 backdrop-blur-sm ${
+              isWishlisted ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-gray-900'
+            }`}
+            onClick={handleWishlistToggle}
+          >
+            <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+          </Button>
+        )}
         {featured && (
           <Badge className="absolute top-3 left-3 bg-primary text-white border-0">
             Featured
           </Badge>
         )}
-        <Badge className="absolute top-3 right-3 bg-white/90 text-black backdrop-blur-sm border-0">
+        <Badge className="absolute bottom-3 right-3 bg-white/90 text-black backdrop-blur-sm border-0">
           Rank #{college.ranking}
         </Badge>
       </div>
@@ -100,15 +127,23 @@ const CollegeCard = ({ college, featured = false }: CollegeCardProps) => {
         
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Fees</span>
+            <span className="text-muted-foreground">Fees (semester)</span>
             <span className="font-medium">
-              {formatAmount(college.fees.min)} - {formatAmount(college.fees.max)}
+              {college.fees.perSemester ? formatAmount(college.fees.perSemester) : formatAmount(college.fees.min / 2)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Reviews</span>
-            <span className="font-medium">{college.reviews.toLocaleString()}</span>
+            <span className="text-muted-foreground">NIRF Ranking</span>
+            <span className="font-medium">{college.nirf || 'N/A'}</span>
           </div>
+          {college.placements && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Avg. Package</span>
+              <span className="font-medium">
+                {formatAmount(college.placements.averagePackage || 0)}/yr
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-y-2 gap-x-4">
